@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Color Arcade: a five-round classroom game on color in data visualization (DSCI 5360, University of North Texas).">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Color Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: one stage card per round, a five-step rail on top; arcade display face, low-vision body face (the subject is perception). */
+:root{
+  --bg:#F3F5F2; --surface:#FFFFFF; --ink:#16201A; --muted:#58645C; --line:#D5DCD6;
+  --green:#00853E; --green-soft:#E3F1E8; --target:#E8710A; --blue:#1F6FB4; --dot:#A3AAA5;
+  --bad:#B3261E; --good:#00853E;
+  --display:"Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101512; --surface:#18201B; --ink:#E9EFEA; --muted:#A3B0A7; --line:#2E3A33;
+  --green:#3DBB74; --green-soft:#1C3326; --target:#F28A2E; --blue:#5AA2E0; --dot:#6E7872; --bad:#F2867D; --good:#3DBB74; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101512; --surface:#18201B; --ink:#E9EFEA; --muted:#A3B0A7; --line:#2E3A33;
+  --green:#3DBB74; --green-soft:#1C3326; --target:#F28A2E; --blue:#5AA2E0; --dot:#6E7872; --bad:#F2867D; --good:#3DBB74; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+h1{font-family:var(--display);font-size:clamp(28px,6vw,40px);letter-spacing:.02em;margin:0;line-height:1.05}
+h1 span{color:var(--target)}
+.course{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.score{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+nav{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+nav button{font:600 13px/1.2 var(--body);padding:10px 6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:8px;cursor:pointer;text-align:left;min-width:0}
+nav button b{display:block;font-family:var(--display);font-size:16px;color:var(--ink)}
+nav button[aria-current="true"]{border-color:var(--green);box-shadow:inset 0 -3px 0 var(--green);color:var(--ink)}
+nav button.done b::after{content:" ✓";color:var(--green)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.eyebrow{font:700 12px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+h2{font-family:var(--display);font-size:26px;margin:0;text-wrap:balance}
+p{margin:0;max-width:65ch}
+.muted{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font:700 16px/1 var(--body);padding:12px 18px;border-radius:10px;border:2px solid var(--green);background:var(--green);color:#fff;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--green)}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible,.opt:focus-visible{outline:3px solid var(--target);outline-offset:2px}
+.board{width:100%;max-width:520px;aspect-ratio:4/3;margin:0 auto;display:block;background:var(--bg);border-radius:12px;touch-action:manipulation}
+.board.sq{aspect-ratio:1/1;max-width:420px}
+.hud{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.opt{font:700 16px/1.2 var(--body);padding:14px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.opt.right{border-color:var(--good);background:var(--green-soft)}
+.opt.wrong{border-color:var(--bad)}
+.takeaway{border-left:4px solid var(--target);background:var(--bg);padding:12px 14px;border-radius:0 10px 10px 0}
+.takeaway b{font-family:var(--display);letter-spacing:.03em}
+.feedback{min-height:1.5em;font-weight:700}
+.feedback.ok{color:var(--good)} .feedback.no{color:var(--bad)}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
+.bars i{display:block;height:14px;border-radius:3px}
+.chartbox{overflow-x:auto}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-width:100%}
+.seg button{font:600 14px var(--body);padding:9px 12px;border:0;background:var(--surface);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--green);color:#fff}
+.final{text-align:center;align-items:center}
+.code{font-family:var(--display);font-size:clamp(30px,8vw,52px);letter-spacing:.12em;color:var(--target)}
+.shake{animation:shake .25s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+@media (max-width:560px){nav button{font-size:0;padding:10px 4px;text-align:center} nav button b{font-size:15px} .stage{padding:16px}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="course">DSCI 5360 · Module 11 · Color</div>
+      <h1>Color <span>Arcade</span></h1>
+    </div>
+    <div class="score" id="score">Score 0</div>
+  </header>
+  <nav id="nav" aria-label="Rounds"></nav>
+  <section class="stage" id="stage" aria-live="polite"></section>
+  <p class="muted" style="font-size:13px">Nothing you do here is saved or sent anywhere. Scores live only in this browser tab.</p>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="deut"><feColorMatrix type="matrix" values="0.367 0.861 -0.228 0 0  0.280 0.673 0.047 0 0  -0.012 0.043 0.969 0 0  0 0 0 1 0"/></filter>
+  <filter id="prot"><feColorMatrix type="matrix" values="0.152 1.053 -0.205 0 0  0.115 0.786 0.099 0 0  -0.004 -0.048 1.052 0 0  0 0 0 1 0"/></filter>
+  <filter id="trit"><feColorMatrix type="matrix" values="1.256 -0.077 -0.179 0 0  -0.078 0.931 0.148 0 0  0.005 0.691 0.304 0 0  0 0 0 1 0"/></filter>
+</svg>
+
+<script>
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS='http://www.w3.org/2000/svg';
+const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const HUES=['#1F77B4','#D62728','#2CA02C','#9467BD','#F2C12E','#E377C2','#17BECF','#8C564B','#7F7F7F','#BCBD22','#393B79','#AD494A','#637939','#843C39'];
+const state={score:0,done:new Set(),round:0};
+function addScore(n){state.score+=n;$('#score').textContent='Score '+state.score}
+
+const ROUNDS=[
+ {key:'popout',name:'Pop-Out',build:popout},
+ {key:'steps',name:'Odd One Out',build:steps},
+ {key:'scheme',name:'Name the Scheme',build:scheme},
+ {key:'fix',name:'Fix the Palette',build:fix},
+ {key:'count',name:'Count the Groups',build:count},
+];
+function renderNav(){
+  const n=$('#nav');n.innerHTML='';
+  ROUNDS.forEach((r,i)=>{const b=document.createElement('button');b.id='nav-'+r.key;
+    b.innerHTML=`<b>${i+1}</b>${r.name}`;b.setAttribute('aria-current',i===state.round);if(state.done.has(i))b.classList.add('done');
+    b.onclick=()=>go(i);n.appendChild(b)});
+}
+function go(i){state.round=i;renderNav();const s=$('#stage');s.classList.remove('final');s.innerHTML='';if(i>=ROUNDS.length)return finale();ROUNDS[i].build(s)}
+function finish(i){state.done.add(i);renderNav()}
+function next(i){return `<div class="row"><button class="btn" id="next-${i}">${i+1<ROUNDS.length?'Next round':'See your result'}</button></div>`}
+function wireNext(i){const b=$('#next-'+i);if(b)b.onclick=()=>go(i+1)}
+function intro(s,n,title,text,startLabel,onStart){
+  s.innerHTML=`<div class="eyebrow">Round ${n} of 5</div><h2>${title}</h2><p>${text}</p><div class="row"><button class="btn" id="start">${startLabel}</button></div>`;
+  $('#start').onclick=onStart;
+}
+
+/* ---------- Round 1: pop-out search ---------- */
+function popout(s){
+  intro(s,1,'Find the orange dot','Six boards. Tap the one orange dot as fast as you can. Some boards are gray, some use every color. Watch your times.','Start',()=>{
+    const modes=shuffle(['gray','gray','gray','rain','rain','rain']);let t=0;const times={gray:[],rain:[]};let misses=0;
+    s.innerHTML=`<div class="hud"><span id="p-trial"></span><span id="p-last"></span></div><svg class="board" id="p-board" viewBox="0 0 400 300" role="img" aria-label="Dots; find the orange one"></svg>`;
+    const board=$('#p-board');let t0;
+    function trial(){
+      if(t>=modes.length)return result();
+      board.innerHTML='';const mode=modes[t];$('#p-trial').textContent=`Board ${t+1} of 6 · ${mode==='gray'?'gray':'many colors'}`;
+      const cells=[];for(let r=0;r<6;r++)for(let c=0;c<8;c++)cells.push([28+c*49+(Math.random()-.5)*20,28+r*49+(Math.random()-.5)*20]);
+      const tgt=Math.floor(Math.random()*cells.length);
+      cells.forEach(([x,y],k)=>{const fill=k===tgt?css('--target'):(mode==='gray'?css('--dot'):HUES[k%HUES.length]);
+        const c=el('circle',{cx:x,cy:y,r:11,fill},board);c.style.cursor='pointer';
+        c.addEventListener('pointerdown',()=>{if(k===tgt){const dt=(performance.now()-t0)/1000;times[mode].push(dt);$('#p-last').textContent=`${dt.toFixed(2)} s`;t++;setTimeout(trial,250)}else{misses++;board.classList.remove('shake');void board.getBBox();board.classList.add('shake')}})});
+      t0=performance.now();
+    }
+    function med(a){const b=[...a].sort((x,y)=>x-y);return b[Math.floor(b.length/2)]}
+    function result(){
+      const g=med(times.gray),r=med(times.rain),mx=Math.max(g,r);addScore(misses===0?2:1);finish(0);
+      s.innerHTML=`<div class="eyebrow">Round 1 result</div><h2>Gray boards: ${g.toFixed(2)} s · Many colors: ${r.toFixed(2)} s</h2>
+      <div class="bars"><span>Gray</span><i style="width:${g/mx*100}%;background:var(--target)"></i><span>${g.toFixed(2)} s</span>
+      <span>Many colors</span><i style="width:${r/mx*100}%;background:var(--dot)"></i><span>${r.toFixed(2)} s</span></div>
+      <p>${r>g?`You were ${(r/g).toFixed(1)}× slower when every dot had its own color.`:'Most people are slower on the colorful boards; you beat the odds this time.'} ${misses?`Misses: ${misses}.`:''}</p>
+      <div class="takeaway"><b>Principle: use color sparingly.</b> A single hue against gray pops out before you even search. When everything is colored, nothing is. This is how a highlight color works on a dashboard.</div>${next(0)}`;
+      wireNext(0);
+    }
+    trial();
+  });
+}
+
+/* ---------- Round 2: just-noticeable difference in lightness ---------- */
+function steps(s){
+  const deltas=[22,14,9,6,4,2.5];let i=0,right=0;const log=[];
+  intro(s,2,'Which tile is different?','Each board has one tile that is a little lighter than the rest. The difference shrinks every board. Tap the odd one, or say you cannot see it.','Start',()=>{
+    s.innerHTML=`<div class="hud"><span id="s-trial"></span><span id="s-delta"></span></div><svg class="board sq" id="s-board" viewBox="0 0 300 300" role="img" aria-label="Five by five tiles"></svg><div class="row"><button class="btn ghost" id="s-cant">I can't see a difference</button></div><div class="feedback" id="s-fb"></div>`;
+    const board=$('#s-board');
+    function trial(){
+      if(i>=deltas.length)return result();
+      board.innerHTML='';const odd=Math.floor(Math.random()*25);const L=48;
+      $('#s-trial').textContent=`Board ${i+1} of ${deltas.length}`;$('#s-delta').textContent=`difference: ${deltas[i]}% lightness`;
+      for(let k=0;k<25;k++){const x=6+(k%5)*58,y=6+Math.floor(k/5)*58;
+        const r=el('rect',{x,y,width:52,height:52,rx:6,fill:`hsl(207 55% ${k===odd?L+deltas[i]:L}%)`},board);r.style.cursor='pointer';
+        r.addEventListener('pointerdown',()=>answer(k===odd,odd))}
+    }
+    function answer(ok,odd){log.push({d:deltas[i],ok});if(ok){right++;addScore(1)}
+      $('#s-fb').className='feedback '+(ok?'ok':'no');$('#s-fb').textContent=ok?'Got it.':'Not that one.';i++;setTimeout(()=>{$('#s-fb').textContent='';trial()},450)}
+    $('#s-cant').onclick=()=>answer(false);
+    function result(){finish(1);const lastOk=log.filter(l=>l.ok).map(l=>l.d);const limit=lastOk.length?Math.min(...lastOk):null;
+      s.innerHTML=`<div class="eyebrow">Round 2 result</div><h2>${right} of ${deltas.length} boards</h2>
+      <p>${limit?`The smallest difference you caught was ${limit}% lightness.`:'The differences were hard to see from the start.'} Most people lose the odd tile somewhere around 4–6%, and it gets worse on small marks such as thin lines and map dots.</p>
+      <div class="takeaway"><b>Principle: limited discriminability.</b> Readers can only tell a handful of lightness steps apart. A sequential legend with 12 shades asks for more than the eye can give, so use about 5–7 steps and label the values.</div>${next(1)}`;wireNext(1)}
+    trial();
+  });
+}
+
+/* ---------- Round 3: name the scheme ---------- */
+const SCHEME_Q=[
+ ['Median home price by county on a map','Sequential','One quantity from low to high, with no meaningful midpoint.'],
+ ['Change in enrollment since last year: some programs grew, some shrank','Diverging','Zero change is the midpoint; growth and decline get two hues.'],
+ ['Support tickets by type (Bug, Feature, Question) on a timeline','Categorical','Three unordered kinds: three distinct hues.'],
+ ['UNT among 40 Texas universities on a scatterplot','Highlight','One color for the item you care about, gray for the rest.'],
+ ['Temperature compared with the 1991–2020 average','Diverging','The average is the midpoint: warmer in one hue, cooler in another.'],
+ ['Trick-or-treaters per 30-minute slot, as a heatmap by year','Sequential','Counts from few to many: one hue, light to dark.'],
+ ['Five airline brands on one line chart','Categorical','Five unordered lines: five distinct hues (keep it under about eight).'],
+ ['Survey answers from Strongly disagree to Strongly agree','Diverging','Ordered, with Neutral as the midpoint; not categorical.'],
+];
+function scheme(s){
+  const qs=shuffle([...SCHEME_Q]);let i=0,right=0;
+  intro(s,3,'Name the color scheme','Eight data situations. Pick the scheme that fits each one: sequential, diverging, categorical, or highlight.','Start',()=>{
+    function q(){
+      if(i>=qs.length)return result();
+      const [text,ans,why]=qs[i];
+      s.innerHTML=`<div class="hud"><span>Question ${i+1} of ${qs.length}</span><span>${right} right</span></div><h2>${text}</h2>
+      <div class="opts">${['Sequential','Diverging','Categorical','Highlight'].map(o=>`<button class="opt" data-o="${o}">${o}</button>`).join('')}</div><div class="feedback" id="q-fb"></div><div id="q-why"></div>`;
+      s.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+        s.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(x.dataset.o===ans)x.classList.add('right')});
+        const ok=b.dataset.o===ans;if(!ok)b.classList.add('wrong');else{right++;addScore(1)}
+        $('#q-fb').className='feedback '+(ok?'ok':'no');$('#q-fb').textContent=ok?'Right.':`It's ${ans.toLowerCase()}.`;
+        $('#q-why').innerHTML=`<p class="muted">${why}</p><div class="row" style="margin-top:10px"><button class="btn" id="q-next">${i+1<qs.length?'Next':'Finish round'}</button></div>`;
+        $('#q-next').onclick=()=>{i++;q()};$('#q-next').focus();
+      });
+    }
+    function result(){finish(2);s.innerHTML=`<div class="eyebrow">Round 3 result</div><h2>${right} of ${qs.length} right</h2>
+      <div class="takeaway"><b>Principle: expressiveness.</b> The color scheme has to match the type of data (Munzner). Ordered data gets a luminance ramp, data with a meaningful midpoint gets two hues around a neutral, unordered categories get distinct hues, and a single item of interest gets one color against gray.</div>${next(2)}`;wireNext(2)}
+    q();
+  });
+}
+
+/* ---------- Round 4: pick a palette, then test it for color vision deficiency ---------- */
+const PROFIT=[['Appliances',122],['Binders',227],['Bookcases',-8],['Chairs',165],['Computer Periph.',88],['Copiers & Fax',129],['Envelopes',46],['Labels',18],['Furnishings',92],['Office Machines',168],['Paper',35],['Pens & Art',1],['Rubber Bands',-3],['Scissors & Rulers',-2],['Storage',8],['Tables',-73],['Telephones',298]];
+function fix(s){
+  const PAL={
+    rainbow:{name:'Rainbow, one hue per bar',col:(v,k)=>`hsl(${k*21} 85% 50%)`},
+    seq:{name:'One blue, light to dark',col:v=>`hsl(207 60% ${85-((v+73)/371)*55}%)`},
+    rg:{name:'Red for loss, green for profit',col:v=>v<0?'#C62828':'#2E7D32'},
+    ob:{name:'Orange for loss, blue for profit',col:v=>v<0?css('--target'):css('--blue')},
+  };
+  let pick=null,vision='none',scored=false;
+  s.innerHTML=`<div class="eyebrow">Round 4 of 5</div><h2>Fix the palette</h2>
+  <p>Superstore profit by category ($ thousands). The question is: which categories lose money? Pick the palette that answers it best, then check it the way a colorblind reader sees it.</p>
+  <div class="opts" id="f-opts">${Object.entries(PAL).map(([k,p])=>`<button class="opt" data-k="${k}">${p.name}</button>`).join('')}</div>
+  <div class="row"><span class="muted">See it with:</span><div class="seg" id="f-seg">${[['none','Typical vision'],['deut','Deuteranopia'],['prot','Protanopia'],['trit','Tritanopia']].map(([k,l])=>`<button data-v="${k}" aria-pressed="${k==='none'}">${l}</button>`).join('')}</div></div>
+  <div class="chartbox"><svg id="f-chart" viewBox="0 0 520 400" style="width:100%;min-width:420px;display:block" role="img" aria-label="Bar chart of profit by category"></svg></div>
+  <div class="feedback" id="f-fb"></div><div id="f-after"></div>`;
+  function draw(){
+    const svg=$('#f-chart');svg.innerHTML='';const g=el('g',{filter:vision==='none'?'':`url(#${vision})`},svg);
+    const x0=150,x1=505,mn=-80,mx=300,sx=v=>x0+(v-mn)/(mx-mn)*(x1-x0),bh=18,gap=4.5;
+    el('line',{x1:sx(0),x2:sx(0),y1:4,y2:PROFIT.length*(bh+gap)+4,stroke:css('--muted'),'stroke-width':1},svg);
+    PROFIT.forEach(([n,v],k)=>{const y=6+k*(bh+gap);
+      const t=el('text',{x:x0-8,y:y+bh*0.72,'text-anchor':'end','font-size':12,fill:css('--ink'),'font-family':'Atkinson Hyperlegible, Verdana, sans-serif'},svg);t.textContent=n;
+      el('rect',{x:Math.min(sx(0),sx(v)),y,width:Math.max(1.5,Math.abs(sx(v)-sx(0))),height:bh,rx:2,fill:pick?PAL[pick].col(v,k):css('--dot')},g)});
+    [-50,0,100,200,300].forEach(t=>{const tx=el('text',{x:sx(t),y:PROFIT.length*(bh+gap)+22,'text-anchor':'middle','font-size':11,fill:css('--muted')},svg);tx.textContent=t});
+  }
+  s.querySelectorAll('#f-opts .opt').forEach(b=>b.onclick=()=>{pick=b.dataset.k;s.querySelectorAll('#f-opts .opt').forEach(x=>x.classList.remove('right','wrong'));
+    const ok=pick==='ob';b.classList.add(ok?'right':'wrong');if(ok&&!scored){addScore(2);scored=true}
+    const msg={rainbow:'Every bar gets its own hue, so color carries no meaning. The losses do not stand out.',seq:'A one-hue ramp treats loss as just "a little less blue". There is no midpoint at zero.',rg:'It works for most people. Now switch to Deuteranopia: about 1 in 12 men sees this.',ob:'Losses pop out, zero is the dividing line, and it survives every color vision type. Try the toggles.'}[pick];
+    $('#f-fb').className='feedback '+(ok?'ok':'no');$('#f-fb').textContent=(ok?'Best choice. ':'Look again. ')+msg;draw();
+    if(ok){finish(3);$('#f-after').innerHTML=`<div class="takeaway"><b>Principle: design for every reader.</b> Never let color alone carry the message, and avoid red/green pairs. Orange/blue (Tableau's Orange-Blue Diverging) or the Color Blind palette are safe defaults. Check your own dashboard with a simulator before you publish it.</div>${next(3)}`;wireNext(3)}});
+  s.querySelectorAll('#f-seg button').forEach(b=>b.onclick=()=>{vision=b.dataset.v;s.querySelectorAll('#f-seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));draw()});
+  draw();
+}
+
+/* ---------- Round 5: how many hue groups can you count? ---------- */
+function count(s){
+  const ks=[4,6,9,12];let i=0,right=0;const log=[];
+  intro(s,5,'How many groups?','Each scatterplot colors its groups by hue. Count the groups and pick the number. The boards get busier.','Start',()=>{
+    function trial(){
+      if(i>=ks.length)return result();
+      const k=ks[i];const choices=shuffle([...new Set([k-2,k-1,k,k+1,k+2].filter(x=>x>1))]).slice(0,4);if(!choices.includes(k))choices[0]=k;choices.sort((a,b)=>a-b);
+      s.innerHTML=`<div class="hud"><span>Board ${i+1} of ${ks.length}</span><span>${right} right</span></div><svg class="board" id="c-board" viewBox="0 0 400 300" role="img" aria-label="Scatterplot with colored groups"></svg>
+      <div class="opts">${choices.map(c=>`<button class="opt" data-c="${c}">${c} groups</button>`).join('')}</div><div class="feedback" id="c-fb"></div>`;
+      const board=$('#c-board');const cols=shuffle([...HUES]).slice(0,k);
+      const pts=[];for(let n=0;n<130;n++)pts.push([12+Math.random()*376,12+Math.random()*276,cols[n%k]]);
+      shuffle(pts).forEach(([x,y,c])=>el('circle',{cx:x,cy:y,r:5,fill:c},board));
+      s.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.c===k;log.push({k,ok});if(ok){right++;addScore(1)}
+        s.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.c===k)x.classList.add('right')});if(!ok)b.classList.add('wrong');
+        $('#c-fb').className='feedback '+(ok?'ok':'no');$('#c-fb').textContent=ok?`Yes, ${k} groups.`:`It was ${k} groups.`;i++;setTimeout(trial,1100)});
+    }
+    function result(){finish(4);s.innerHTML=`<div class="eyebrow">Round 5 result</div><h2>${right} of ${ks.length} boards</h2>
+      <p>${log.map(l=>`${l.k} groups: ${l.ok?'right':'missed'}`).join(' · ')}</p>
+      <div class="takeaway"><b>Principle: hue is for a few categories.</b> People can keep roughly six to eight hues apart; past that, similar colors merge and readers lean on the legend. Group the rest as "Other", facet into small multiples, or highlight the one that matters.</div>${next(4)}`;wireNext(4)}
+    trial();
+  });
+}
+
+/* ---------- Final ---------- */
+function finale(){
+  const s=$('#stage');s.classList.add('final');renderNav();
+  s.innerHTML=`<div class="eyebrow">Color Arcade complete</div><h2>Your score: ${state.score} of 22</h2>
+  <p class="muted">Rounds finished: ${state.done.size} of 5</p>
+  <div class="code">LUMINANCE</div>
+  <p>Enter this code word when your instructor asks for it in iClicker.</p>
+  <div class="takeaway" style="text-align:left"><b>Five principles to take to your project:</b> use color sparingly · respect the limits of the eye · match the scheme to the data · design for colorblind readers · keep categories to a handful of hues.</div>
+  <div class="row"><button class="btn ghost" id="again">Play again</button></div>`;
+  $('#again').onclick=()=>{state.score=0;state.done.clear();addScore(0);s.classList.remove('final');go(0)};
+}
+go(0);
+</script>
+
+</body>
+</html>
